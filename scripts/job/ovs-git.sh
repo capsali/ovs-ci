@@ -6,14 +6,17 @@ function Check-LastRanFile {
     lastranfile="$WORKSPACE/lastrancommit.txt"
     if [ ! -e $lastranfile ]; then
         echo "LastRanFile doesn't exist. Creating it."
-        cd $WORKSPACE/ovs
-        git rev-parse HEAD | tee $WORKSPACE/lastrancommit.txt
+        git -C $WORKSPACE/ovs rev-parse HEAD | tee $WORKSPACE/lastrancommit.txt
+        echo "Starting first job for OVS unit tests"
+        firstcommit=$(cat $WORKSPACE/lastrancommit.txt)
+        curl -X POST "http://{jenkins_user}:{jenkins_pass}@{jenkins_ip}:8080/job/ovs-build-job/buildWithParameters?token={token}&commitid=$firstcommit"
+        echo "Job for first commitID $firstcommit started"
     fi
 }
 
 function Get-GitLog {
-    currentcommit=`cat $WORKSPACE/lastrancommit.txt`
-    commitlog=`git rev-list $currentcommit...HEAD`
+    currentcommit=$(cat $WORKSPACE/lastrancommit.txt)
+    commitlog=$(git -C $WORKSPACE/ovs rev-list $currentcommit...HEAD)
     if [ ! "$commitlog" ]; then
         echo "There are no new commits to OVS master. Existing Job."
         exit 0
@@ -22,23 +25,19 @@ function Get-GitLog {
     head -1 $WORKSPACE/gitlog.txt | tee $WORKSPACE/lastrancommit.txt
 }
 
-function Start-CommitJob {
+function Start-OVSBuildJob {
     while read line
     do
         echo "Starting job for commitID $line"
-        curl -X POST "http://$jenk_user:$jenk_api@10.20.1.3:8080/job/ovs-build-job/buildWithParameters?token=b204eee759ab38ebb986d223f6c5b4ce&commitid=$line"
+        curl -X POST "http://{jenkins_user}:{jenkins_pass}@{jenkins_ip}:8080/job/ovs-build-job/buildWithParameters?token={token}&commitid=$line"
         echo "Job for commitID $line started"
     done < $WORKSPACE/gitlog.txt
 }
-
-export WORKSPACE="/var/lib/jenkins/jobs/master-job/workspace"
 
 echo "Getting commit ID's and writing them to $WORKSPACE/gitlog.txt"
 
 Check-LastRanFile
 
-cd $WORKSPACE/ovs
-
 Get-GitLog
 
-Start-CommitJob
+Start-OVSBuildJob

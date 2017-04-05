@@ -1,5 +1,3 @@
-$ErrorActionPreference = "Stop"
-
 # Make directory structure
 $redistDir = "C:\Openstack\OpenvSwitch\Redist\"
 if (Test-Path $redistDir) {
@@ -18,10 +16,10 @@ Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.6.0/python-3.6.0-emb
 Invoke-WebRequest -Uri "https://download.microsoft.com/download/9/6/4/96442E58-C65C-4122-A956-CCA83EECCD03/wdexpress_full.exe" -OutFile "$redistDir\wdexpress_full.exe"
 Invoke-WebRequest -Uri "https://download.microsoft.com/download/0/8/C/08C7497F-8551-4054-97DE-60C0E510D97A/wdk/wdksetup.exe" -OutFile "$redistDir\wdksetup.exe"
 Invoke-WebRequest -Uri "https://netix.dl.sourceforge.net/project/pthreads4w/pthreads-w32-2-9-1-release.zip" -OutFile "$redistDir\pthreads-w32.zip"
-Invoke-WebRequest -Uri "http://downloads.activestate.com/ActivePerl/releases/5.22.1.2201/ActivePerl-5.22.1.2201-MSWin32-x64-299574.msi" -OutFile "$redistDir\activeperl-x64.msi"
+Invoke-WebRequest -Uri "http://downloads.activestate.com/ActivePerl/releases/5.24.1.2402/ActivePerl-5.24.1.2402-MSWin32-x64-401627.exe" -OutFile "$redistDir\activeperl-x64.exe"
 Invoke-WebRequest -Uri "http://download.microsoft.com/download/A/A/D/AAD1AA11-FF9A-4B3C-8601-054E89260B78/vs_community.exe" -OutFile "$redistDir\vs_community.exe"
-Invoke-WebRequest -Uri "https://the.earth.li/~sgtatham/putty/0.67/x86/putty-0.67-installer.msi" -OutFile "$redistDir\Redist\putty.msi"
-Invoke-WebRequest -Uri "https://gallery.technet.microsoft.com/scriptcenter/Powershell-module-to-send-44b0716a/file/136703/1/SBeMail.rar" -OutFile "$redistDir\SBeMail.rar"
+Invoke-WebRequest -Uri "https://the.earth.li/~sgtatham/putty/0.67/x86/putty-0.67-installer.msi" -OutFile "$redistDir\putty.msi"
+
 # Install prerequisite
 Set-Location C:\Openstack\OpenvSwitch\Redist\
 
@@ -34,7 +32,7 @@ $git_exe = "$redistDir\git-x64.exe"
 Start-Process -FilePath $git_exe -ArgumentList "/SILENT","/COMPONENTS='icons,ext\reg\shellhere,assoc,assoc_sh'","/i" -Wait -PassThru
 
 # Install Putty
-$putty_msi = "$redistDir\Redist\putty.msi"
+$putty_msi = "$redistDir\putty.msi"
 Start-Process -FilePath $putty_msi -ArgumentList "/q" -Wait -PassThru
 
 # Install cmake
@@ -56,9 +54,8 @@ python -m pip install six
 python -m pip install pypiwin32
 
 # Install ActivePerl
-$activeperl_msi = "$redistDir\activeperl-x64.msi"
-Start-Process -FilePath msiexec.exe -ArgumentList "/q","/i","$activeperl_msi" -Wait -PassThru
-
+$activeperl_exe = "$redistDir\activeperl-x64.exe"
+Start-Process -FilePath $activeperl_exe -ArgumentList "/q","/i" -Wait -PassThru
 
 # Install Pthreads
 $pthreads_zip = "$redistDir\pthreads-w32.zip"
@@ -99,12 +96,15 @@ mingw-get upgrade msys-core-bin=1.0.17-1
 #Rename-Item C:\mingw\msys\1.0\etc\fstab.sample fstab
 
 # Make sure msys get the link.exe from VS12 and not the default one.
-Rename-Item C:\mingw\msys\1.0\bin\link.exe linkbak.exe
+Rename-Item -Force C:\mingw\msys\1.0\bin\link.exe linkbak.exe
 
 # Set WinRM concurrent processes per shell
 winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="2048"}'
 winrm set winrm/config/winrs '@{MaxProcessesPerShell="10000"}'
 winrm set winrm/config/winrs '@{MaxShellsPerUser="100"}'
+
+# Set power scheme to performance
+powercfg.exe /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
 # Restart Windows so that all $env variables are set.
 Restart-Computer
